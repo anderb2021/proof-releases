@@ -50,13 +50,20 @@ jobs:
         run: |
           echo "Skipping signing - installers will be unsigned but functional"
           
+      - name: List build artifacts
+        run: |
+          echo "Listing all build artifacts:"
+          find src-tauri/target/release/bundle -type f -name "*.exe" -o -name "*.dmg" -o -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" | head -20
+          
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            src-tauri/target/release/bundle/nsis/Proof_${GITHUB_REF_NAME}_x64-setup.exe
-            src-tauri/target/release/bundle/dmg/Proof_${GITHUB_REF_NAME}_x64.dmg
-            src-tauri/target/release/bundle/appimage/Proof_${GITHUB_REF_NAME}_x86_64.AppImage
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/dmg/*.dmg
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/rpm/*.rpm
+            src-tauri/target/release/bundle/appimage/*.AppImage
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
