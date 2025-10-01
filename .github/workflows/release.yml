@@ -48,6 +48,7 @@ jobs:
         
       - name: Sign Windows installer
         run: |
+          mkdir -p ~/.tauri
           echo "${{ secrets.TAURI_PRIVATE_KEY }}" > ~/.tauri/proof.key
           tauri signer sign ~/.tauri/proof.key "src-tauri/target/release/bundle/nsis/Proof_${GITHUB_REF_NAME}_x64-setup.exe"
           
