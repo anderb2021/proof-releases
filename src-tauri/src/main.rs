@@ -220,42 +220,6 @@ async fn load_session(id: String) -> Result<ChatSession, String> {
     serde_json::from_str::<ChatSession>(&content).map_err(|e| e.to_string())
 }
 
-// Auto-updater commands
-#[tauri::command]
-async fn check_for_updates(app: tauri::AppHandle) -> Result<{ updateAvailable: bool, version: Option<String> }, String> {
-    match app.updater().check().await {
-        Ok(update) => {
-            if update.is_update_available() {
-                Ok({ updateAvailable: true, version: Some(update.latest_version().to_string()) })
-            } else {
-                Ok({ updateAvailable: false, version: None })
-            }
-        }
-        Err(e) => Err(e.to_string())
-    }
-}
-
-#[tauri::command]
-async fn download_update(app: tauri::AppHandle) -> Result<(), String> {
-    match app.updater().check().await {
-        Ok(update) => {
-            if update.is_update_available() {
-                update.download_and_install().await.map_err(|e| e.to_string())?;
-                app.restart();
-                Ok(())
-            } else {
-                Err("No update available".to_string())
-            }
-        }
-        Err(e) => Err(e.to_string())
-    }
-}
-
-#[tauri::command]
-async fn install_update(app: tauri::AppHandle) -> Result<(), String> {
-    app.restart();
-    Ok(())
-}
 
 #[tokio::main]
 async fn main() {
@@ -272,34 +236,8 @@ async fn main() {
             save_settings,
             save_session,
             list_sessions,
-            load_session,
-            check_for_updates,
-            download_update,
-            install_update
+            load_session
         ])
-        .setup(|app| {
-            // Check for updates on startup
-            let app_handle = app.handle();
-            tauri::async_runtime::spawn(async move {
-                match app_handle.updater().check().await {
-                    Ok(update) => {
-                        if update.is_update_available() {
-                            println!("Update available: {}", update.latest_version());
-                            // You can show a dialog here or auto-update
-                            match update.download_and_install().await {
-                                Ok(_) => {
-                                    println!("Update downloaded and installed");
-                                    app_handle.restart();
-                                }
-                                Err(e) => println!("Update failed: {}", e),
-                            }
-                        }
-                    }
-                    Err(e) => println!("Failed to check for updates: {}", e),
-                }
-            });
-            Ok(())
-        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
