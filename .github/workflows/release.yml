@@ -46,19 +46,9 @@ jobs:
           pnpm tauri build
           echo "Build completed"
         
-      - name: Sign Windows installer
+      - name: Skip signing for now
         run: |
-          mkdir -p ~/.tauri
-          echo "${{ secrets.TAURI_PRIVATE_KEY }}" > ~/.tauri/proof.key
-          tauri signer sign --private-key ~/.tauri/proof.key src-tauri/target/release/bundle/nsis/Proof_${GITHUB_REF_NAME}_x64-setup.exe
-          
-      - name: Sign macOS app
-        run: |
-          tauri signer sign --private-key ~/.tauri/proof.key src-tauri/target/release/bundle/macos/Proof.app
-          
-      - name: Sign Linux AppImage
-        run: |
-          tauri signer sign --private-key ~/.tauri/proof.key src-tauri/target/release/bundle/appimage/Proof_${GITHUB_REF_NAME}_x86_64.AppImage
+          echo "Skipping signing - installers will be unsigned but functional"
           
       - name: Create Release
         uses: softprops/action-gh-release@v1
