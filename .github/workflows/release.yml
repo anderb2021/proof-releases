@@ -50,15 +50,15 @@ jobs:
         run: |
           mkdir -p ~/.tauri
           echo "${{ secrets.TAURI_PRIVATE_KEY }}" > ~/.tauri/proof.key
-          tauri signer sign ~/.tauri/proof.key "src-tauri/target/release/bundle/nsis/Proof_${GITHUB_REF_NAME}_x64-setup.exe"
+          tauri signer sign ~/.tauri/proof.key src-tauri/target/release/bundle/nsis/Proof_${GITHUB_REF_NAME}_x64-setup.exe
           
       - name: Sign macOS app
         run: |
-          tauri signer sign ~/.tauri/proof.key "src-tauri/target/release/bundle/macos/Proof.app"
+          tauri signer sign ~/.tauri/proof.key src-tauri/target/release/bundle/macos/Proof.app
           
       - name: Sign Linux AppImage
         run: |
-          tauri signer sign ~/.tauri/proof.key "src-tauri/target/release/bundle/appimage/Proof_${GITHUB_REF_NAME}_x86_64.AppImage"
+          tauri signer sign ~/.tauri/proof.key src-tauri/target/release/bundle/appimage/Proof_${GITHUB_REF_NAME}_x86_64.AppImage
           
       - name: Create Release
         uses: softprops/action-gh-release@v1
