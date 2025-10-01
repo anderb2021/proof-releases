@@ -1,0 +1,9 @@
+import { invoke } from "@tauri-apps/api/tauri";
+
+export const ollamaHealth = () => invoke<boolean>("ollama_health");
+export const ollamaEnsure = () => invoke<void>("ollama_ensure");
+export const listModels = () => invoke<Array<{ model: string }>>("models_list");
+export const pullModel = (model: string) => invoke<void>("model_pull", { args: { model } });
+export const deleteModel = (model: string) => invoke<void>("model_delete", { args: { model } });
+export const generateText = (model: string, prompt: string, temperature?: number, numCtx?: number) =>
+  invoke<string>("generate_text", { args: { model, prompt, temperature, num_ctx: numCtx } });

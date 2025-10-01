@@ -1,0 +1,71 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Proof",
+  "version": "1.0.0",
+  "identifier": "com.brian.proof",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Proof - Local LLM",
+        "width": 1000,
+        "height": 700,
+        "minWidth": 800,
+        "minHeight": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "updater": {
+    "active": true,
+    "endpoints": [
+      "https://api.github.com/repos/anderb2021/proof-releases/releases/latest"
+    ],
+    "dialog": true,
+    "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5ODJkUVRBdWpCQkEyQ1NPOTJuV2JlY3BHcXlMaHdHU21mODVPemEvUXJmSUFBQkFBQUFBQUFBQUFBQUlBQUFBQWRTLzhkVmNzWTd1bmZOZ3JGRlhnU0F4bS8zQVc3U1dwUWswcnBldzFOOS8xZzFzeHZlbTNNV1dXcWpBKzd4NVUwQ3dUTXkyZVlMY3NqeFZ1S1V3V2NDQjVCWXJJL2RxNkNJN1RJbnRTSmhJcTZSU3dEbzRhUVMxM21HUUJ1YXZnSFIyM0NTSWRyNGc9Cg=="
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "wix": {
+        "language": "en-US"
+      },
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com"
+    },
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": null,
+      "frameworks": [],
+      "providerShortName": null,
+      "signingIdentity": null,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": null
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    }
+  }
+}

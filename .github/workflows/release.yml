@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          
+      - name: Install dependencies
+        run: |
+          npm install -g pnpm
+          pnpm install
+          
+      - name: Install Tauri CLI
+        run: npm install -g @tauri-apps/cli@latest
+        
+      - name: Build application
+        run: pnpm tauri build
+        
+      - name: Sign Windows installer
+        run: |
+          tauri signer sign ~/.tauri/proof.key "src-tauri/target/release/bundle/nsis/Proof_${GITHUB_REF_NAME}_x64-setup.exe"
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          
+      - name: Sign macOS app
+        run: |
+          tauri signer sign ~/.tauri/proof.key "src-tauri/target/release/bundle/macos/Proof.app"
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          
+      - name: Sign Linux AppImage
+        run: |
+          tauri signer sign ~/.tauri/proof.key "src-tauri/target/release/bundle/appimage/Proof_${GITHUB_REF_NAME}_x86_64.AppImage"
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            src-tauri/target/release/bundle/nsis/Proof_${GITHUB_REF_NAME}_x64-setup.exe
+            src-tauri/target/release/bundle/dmg/Proof_${GITHUB_REF_NAME}_x64.dmg
+            src-tauri/target/release/bundle/appimage/Proof_${GITHUB_REF_NAME}_x86_64.AppImage
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
