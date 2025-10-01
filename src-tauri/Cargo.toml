@@ -27,4 +27,5 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
 thiserror = "1"
 dirs = "5"
 futures-util = "0.3"
+sha2 = "0.10"
 

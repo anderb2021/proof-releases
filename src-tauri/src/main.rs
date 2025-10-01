@@ -6,6 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 use futures_util::StreamExt;
 use tauri::{Emitter, Manager};
+use sha2::{Sha256, Digest};
 
 #[tauri::command]
 async fn ollama_health() -> bool { is_running().await }
@@ -220,6 +221,243 @@ async fn load_session(id: String) -> Result<ChatSession, String> {
     serde_json::from_str::<ChatSession>(&content).map_err(|e| e.to_string())
 }
 
+// Parent Lock functionality
+#[derive(Debug, Serialize, Deserialize)]
+struct ParentLock {
+    is_locked: bool,
+    password_hash: String,
+    lock_message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct KidSafeSettings {
+    enabled: bool,
+    content_filter: bool,
+    educational_mode: bool,
+    max_response_length: u32,
+    allowed_topics: Vec<String>,
+    blocked_words: Vec<String>,
+    age_appropriate_level: u8, // 1-5 scale
+    require_parental_approval: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct NetworkSettings {
+    outbound_connections_enabled: bool,
+    ollama_connections_enabled: bool,
+    model_downloads_enabled: bool,
+    update_checks_enabled: bool,
+}
+
+fn get_lock_path() -> Result<PathBuf, String> {
+    let mut config_dir = dirs::config_dir().ok_or("Could not find config directory")?;
+    config_dir.push("proof");
+    std::fs::create_dir_all(&config_dir).map_err(|e| e.to_string())?;
+    Ok(config_dir.join("parent_lock.json"))
+}
+
+fn hash_password(password: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(password.as_bytes());
+    format!("{:x}", hasher.finalize())
+}
+
+#[tauri::command]
+async fn get_parent_lock() -> Result<ParentLock, String> {
+    let lock_path = get_lock_path()?;
+    if lock_path.exists() {
+        let content = fs::read_to_string(&lock_path).map_err(|e| e.to_string())?;
+        serde_json::from_str(&content).map_err(|e| e.to_string())
+    } else {
+        Ok(ParentLock {
+            is_locked: false,
+            password_hash: String::new(),
+            lock_message: "This app is locked by a parent.".to_string(),
+        })
+    }
+}
+
+#[derive(Deserialize)]
+struct SetParentLockArgs {
+    password: String,
+    lock_message: String,
+}
+
+#[tauri::command]
+async fn set_parent_lock(args: SetParentLockArgs) -> Result<(), String> {
+    let lock_path = get_lock_path()?;
+    let lock = ParentLock {
+        is_locked: true,
+        password_hash: hash_password(&args.password),
+        lock_message: args.lock_message,
+    };
+    let content = serde_json::to_string_pretty(&lock).map_err(|e| e.to_string())?;
+    fs::write(&lock_path, content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn unlock_parent_lock(password: String) -> Result<bool, String> {
+    let lock_path = get_lock_path()?;
+    if !lock_path.exists() {
+        return Ok(false);
+    }
+    
+    let content = fs::read_to_string(&lock_path).map_err(|e| e.to_string())?;
+    let mut lock: ParentLock = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+    
+    if lock.password_hash == hash_password(&password) {
+        lock.is_locked = false;
+        let content = serde_json::to_string_pretty(&lock).map_err(|e| e.to_string())?;
+        fs::write(&lock_path, content).map_err(|e| e.to_string())?;
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
+#[tauri::command]
+async fn check_parent_lock() -> Result<bool, String> {
+    let lock_path = get_lock_path()?;
+    if !lock_path.exists() {
+        return Ok(false);
+    }
+    
+    let content = fs::read_to_string(&lock_path).map_err(|e| e.to_string())?;
+    let lock: ParentLock = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+    Ok(lock.is_locked)
+}
+
+// Kid-Safe Settings functionality
+fn get_kidsafe_path() -> Result<PathBuf, String> {
+    let mut config_dir = dirs::config_dir().ok_or("Could not find config directory")?;
+    config_dir.push("proof");
+    std::fs::create_dir_all(&config_dir).map_err(|e| e.to_string())?;
+    Ok(config_dir.join("kidsafe_settings.json"))
+}
+
+#[tauri::command]
+async fn get_kidsafe_settings() -> Result<KidSafeSettings, String> {
+    let settings_path = get_kidsafe_path()?;
+    if settings_path.exists() {
+        let content = fs::read_to_string(&settings_path).map_err(|e| e.to_string())?;
+        serde_json::from_str(&content).map_err(|e| e.to_string())
+    } else {
+        Ok(KidSafeSettings {
+            enabled: false,
+            content_filter: true,
+            educational_mode: true,
+            max_response_length: 1000,
+            allowed_topics: vec![
+                "science".to_string(),
+                "math".to_string(),
+                "history".to_string(),
+                "art".to_string(),
+                "music".to_string(),
+                "sports".to_string(),
+                "nature".to_string(),
+                "animals".to_string(),
+            ],
+            blocked_words: vec![
+                "violence".to_string(),
+                "weapon".to_string(),
+                "scary".to_string(),
+                "frightening".to_string(),
+            ],
+            age_appropriate_level: 3,
+            require_parental_approval: false,
+        })
+    }
+}
+
+#[derive(Deserialize)]
+struct SetKidSafeSettingsArgs {
+    settings: KidSafeSettings,
+}
+
+#[tauri::command]
+async fn set_kidsafe_settings(args: SetKidSafeSettingsArgs) -> Result<(), String> {
+    let settings_path = get_kidsafe_path()?;
+    let content = serde_json::to_string_pretty(&args.settings).map_err(|e| e.to_string())?;
+    fs::write(&settings_path, content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn check_kidsafe_content(prompt: String) -> Result<bool, String> {
+    let settings = get_kidsafe_settings().await?;
+    if !settings.enabled {
+        return Ok(true);
+    }
+
+    // Check for blocked words
+    let prompt_lower = prompt.to_lowercase();
+    for blocked_word in &settings.blocked_words {
+        if prompt_lower.contains(&blocked_word.to_lowercase()) {
+            return Ok(false);
+        }
+    }
+
+    // Check topic appropriateness (basic implementation)
+    let prompt_lower = prompt.to_lowercase();
+    let has_allowed_topic = settings.allowed_topics.iter().any(|topic| {
+        prompt_lower.contains(&topic.to_lowercase())
+    });
+
+    // If educational mode is on, prefer educational topics
+    if settings.educational_mode && !has_allowed_topic {
+        return Ok(false);
+    }
+
+    Ok(true)
+}
+
+// Network Settings functionality
+fn get_network_path() -> Result<PathBuf, String> {
+    let mut config_dir = dirs::config_dir().ok_or("Could not find config directory")?;
+    config_dir.push("proof");
+    std::fs::create_dir_all(&config_dir).map_err(|e| e.to_string())?;
+    Ok(config_dir.join("network_settings.json"))
+}
+
+#[tauri::command]
+async fn get_network_settings() -> Result<NetworkSettings, String> {
+    let settings_path = get_network_path()?;
+    if settings_path.exists() {
+        let content = fs::read_to_string(&settings_path).map_err(|e| e.to_string())?;
+        serde_json::from_str(&content).map_err(|e| e.to_string())
+    } else {
+        Ok(NetworkSettings {
+            outbound_connections_enabled: true,
+            ollama_connections_enabled: true,
+            model_downloads_enabled: true,
+            update_checks_enabled: true,
+        })
+    }
+}
+
+#[derive(Deserialize)]
+struct SetNetworkSettingsArgs {
+    settings: NetworkSettings,
+}
+
+#[tauri::command]
+async fn set_network_settings(args: SetNetworkSettingsArgs) -> Result<(), String> {
+    let settings_path = get_network_path()?;
+    let content = serde_json::to_string_pretty(&args.settings).map_err(|e| e.to_string())?;
+    fs::write(&settings_path, content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn check_network_permission(permission_type: String) -> Result<bool, String> {
+    let settings = get_network_settings().await?;
+    match permission_type.as_str() {
+        "outbound" => Ok(settings.outbound_connections_enabled),
+        "ollama" => Ok(settings.ollama_connections_enabled),
+        "downloads" => Ok(settings.model_downloads_enabled),
+        "updates" => Ok(settings.update_checks_enabled),
+        _ => Ok(false),
+    }
+}
+
 
 #[tokio::main]
 async fn main() {
@@ -236,7 +474,17 @@ async fn main() {
             save_settings,
             save_session,
             list_sessions,
-            load_session
+            load_session,
+            get_parent_lock,
+            set_parent_lock,
+            unlock_parent_lock,
+            check_parent_lock,
+            get_kidsafe_settings,
+            set_kidsafe_settings,
+            check_kidsafe_content,
+            get_network_settings,
+            set_network_settings,
+            check_network_permission
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
