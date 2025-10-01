@@ -27,13 +27,19 @@ jobs:
         run: npm install -g pnpm
         
       - name: Install dependencies
-        run: pnpm install
+        run: |
+          echo "Installing dependencies..."
+          pnpm install
+          echo "Dependencies installed"
           
       - name: Install Tauri CLI
         run: npm install -g @tauri-apps/cli@latest
         
       - name: Build application
-        run: pnpm tauri build
+        run: |
+          echo "Building application..."
+          pnpm tauri build
+          echo "Build completed"
         
       - name: Sign Windows installer
         run: |
