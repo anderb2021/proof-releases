@@ -25,18 +25,16 @@ jobs:
           components: rustfmt, clippy
           
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: latest
-          
+        run: npm install -g pnpm
+        
       - name: Install dependencies
-        run: pnpm install
+        run: npx pnpm install
           
       - name: Install Tauri CLI
         run: npm install -g @tauri-apps/cli@latest
         
       - name: Build application
-        run: pnpm tauri build
+        run: npx pnpm tauri build
         
       - name: Sign Windows installer
         run: |
