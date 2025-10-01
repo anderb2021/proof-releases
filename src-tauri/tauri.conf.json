@@ -55,9 +55,7 @@
       "frameworks": [],
       "providerShortName": null,
       "signingIdentity": null,
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "entitlements": null
+      "hardenedRuntime": true
     },
     "linux": {
       "deb": {
